@@ -306,24 +306,41 @@ def get_total_exemption_amount(declarations):
 
 
 @frappe.whitelist()
-def get_leave_period(from_date: str | datetime.date, to_date: str | datetime.date, company: str):
+def get_leave_period(from_date: str | datetime.date, to_date: str | datetime.date, company: str | None = None):
+	if not company:
+		company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
+	if not company:
+		company = frappe.db.get_value("Company", {}, "name")
+
 	LeavePeriod = frappe.qb.DocType("Leave Period")
-	leave_period = (
+	query = (
 		frappe.qb.from_(LeavePeriod)
 		.select(LeavePeriod.name, LeavePeriod.from_date, LeavePeriod.to_date)
 		.where(
-			(LeavePeriod.company == company)
-			& (LeavePeriod.is_active == 1)
+			(LeavePeriod.is_active == 1)
 			& (
 				LeavePeriod.from_date[from_date:to_date]
 				| LeavePeriod.to_date[from_date:to_date]
-				| ((LeavePeriod.from_date < from_date) & (LeavePeriod.to_date > to_date))
+				| ((LeavePeriod.from_date <= from_date) & (LeavePeriod.to_date >= to_date))
 			)
 		)
-	).run(as_dict=1)
+	)
+	if company:
+		query = query.where(LeavePeriod.company == company)
+
+	leave_period = query.run(as_dict=1)
 
 	if leave_period:
 		return leave_period
+
+	fallback = (
+		frappe.qb.from_(LeavePeriod)
+		.select(LeavePeriod.name, LeavePeriod.from_date, LeavePeriod.to_date)
+		.where(LeavePeriod.is_active == 1)
+	)
+	if company:
+		fallback = fallback.where(LeavePeriod.company == company)
+	return fallback.run(as_dict=1)
 
 
 def generate_leave_encashment():

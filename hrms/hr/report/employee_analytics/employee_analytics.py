@@ -14,8 +14,11 @@ def execute(filters=None):
 	if not filters:
 		filters = {}
 
-	if not filters["company"]:
-		frappe.throw(_("{0} is mandatory").format(_("Company")))
+	if not filters.get("company"):
+		filters["company"] = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
+
+	if not filters.get("parameter"):
+		filters["parameter"] = "Department"
 
 	columns = get_columns()
 	employees = get_employees(filters)

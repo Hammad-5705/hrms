@@ -13,8 +13,8 @@ from erpnext.accounts.utils import build_qb_match_conditions
 def execute(filters=None):
 	if not filters:
 		filters = {}
-	if not filters["company"]:
-		frappe.throw(_("{0} is mandatory").format(_("Company")))
+	if not filters.get("company"):
+		filters["company"] = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
 	columns = get_columns()
 	data = get_employees(filters)
 
@@ -38,7 +38,7 @@ def get_employees(filters):
 	month = get_filtered_month(filters)
 
 	employee = frappe.qb.DocType("Employee")
-	employees = (
+	query = (
 		frappe.qb.from_(employee)
 		.select(
 			employee.name,
@@ -50,17 +50,19 @@ def get_employees(filters):
 			employee.gender,
 			employee.company,
 		)
-		.where(employee.company == filters.get("company"))
 		.where(employee.status == "Active")
 		.where(Extract("month", employee.date_of_birth) == month)
 		.where(Criterion.all(build_qb_match_conditions("Employee")))
-	).run()
+	)
 
-	return employees
+	if filters.get("company"):
+		query = query.where(employee.company == filters.get("company"))
+
+	return query.run()
 
 
 def get_filtered_month(filters):
-	return [
+	months = [
 		"Jan",
 		"Feb",
 		"Mar",
@@ -73,4 +75,9 @@ def get_filtered_month(filters):
 		"Oct",
 		"Nov",
 		"Dec",
-	].index(filters["month"]) + 1
+	]
+	month = (filters or {}).get("month")
+	if month in months:
+		return months.index(month) + 1
+	return frappe.utils.getdate().month
+

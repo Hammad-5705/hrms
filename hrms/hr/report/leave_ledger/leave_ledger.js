@@ -100,8 +100,10 @@ frappe.query_reports["Leave Ledger"] = {
 			},
 			freeze: true,
 			callback: (data) => {
-				frappe.query_report.set_filter_value("from_date", data.message[0].from_date);
-				frappe.query_report.set_filter_value("to_date", data.message[0].to_date);
+				if (data.message && data.message.length) {
+					frappe.query_report.set_filter_value("from_date", data.message[0].from_date);
+					frappe.query_report.set_filter_value("to_date", data.message[0].to_date);
+				}
 			},
 		});
 	},
