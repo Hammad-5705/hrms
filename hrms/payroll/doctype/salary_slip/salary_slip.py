@@ -219,7 +219,7 @@ class SalarySlip(TransactionBase):
 		if self.payroll_frequency:
 			self.get_date_details()
 
-		if not (len(self.get("earnings")) or len(self.get("deductions"))):
+		if not (len(self.get("earnings") or []) or len(self.get("deductions") or [])):
 			# get details from salary structure
 			self.get_emp_and_working_day_details()
 		else:
@@ -1181,7 +1181,7 @@ class SalarySlip(TransactionBase):
 		)
 
 		# Current period exempted amount
-		for d in self.get("deductions"):
+		for d in self.get("deductions") or []:
 			if d.exempted_from_income_tax:
 				current_period_exempted_amount += d.amount
 
@@ -1369,7 +1369,7 @@ class SalarySlip(TransactionBase):
 		default_data = data.copy()
 
 		for key in COMPONENT_PARENTFIELDS:
-			for d in self.get(key):
+			for d in self.get(key) or []:
 				default_data[d.abbr] = d.default_amount or 0
 				data[d.abbr] = d.amount or 0
 
@@ -1678,7 +1678,7 @@ class SalarySlip(TransactionBase):
 		# consider manually added tax component
 		if not tax_components:
 			tax_components = [
-				d.salary_component for d in self.get("deductions") if d.variable_based_on_taxable_salary
+				d.salary_component for d in self.get("deductions") or [] if d.variable_based_on_taxable_salary
 			]
 
 		if self.is_new() and not tax_components:
@@ -1792,7 +1792,7 @@ class SalarySlip(TransactionBase):
 		remove_if_zero_valued=None,
 	):
 		component_row = None
-		for d in self.get(component_type):
+		for d in self.get(component_type) or []:
 			if d.salary_component != component_data.salary_component:
 				continue
 
@@ -1808,7 +1808,7 @@ class SalarySlip(TransactionBase):
 				component_type,
 				[
 					d
-					for d in self.get(component_type)
+					for d in self.get(component_type) or []
 					if d.salary_component != component_data.salary_component
 					or (d.additional_salary and additional_salary.name != d.additional_salary)
 					or d == component_row
@@ -1882,7 +1882,7 @@ class SalarySlip(TransactionBase):
 
 	def set_precision_for_component_amounts(self):
 		for component_type in COMPONENT_PARENTFIELDS:
-			for component_row in self.get(component_type):
+			for component_row in self.get(component_type) or []:
 				component_row.amount = flt(component_row.amount, component_row.precision("amount"))
 
 	def calculate_variable_based_on_taxable_salary(self, tax_component):
@@ -2422,7 +2422,7 @@ class SalarySlip(TransactionBase):
 		sd = frappe.qb.DocType("Salary Detail")
 
 		for key in COMPONENT_PARENTFIELDS:
-			for component in self.get(key):
+			for component in self.get(key) or []:
 				year_to_date = 0
 				component_sum = (
 					frappe.qb.from_(sd)
