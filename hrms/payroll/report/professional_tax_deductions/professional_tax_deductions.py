@@ -42,12 +42,24 @@ def get_data(filters):
 	SalaryDetail = DocType("Salary Detail")
 	SalaryComponent = DocType("Salary Component")
 
-	component_type_list = (
-		frappe.qb.from_(SalaryComponent)
-		.select(SalaryComponent.name, SalaryComponent.component_type)
-		.where(SalaryComponent.component_type == "Professional Tax")
-		.run(pluck="name")
-	)
+	if frappe.db.has_column("Salary Component", "component_type"):
+		component_type_list = (
+			frappe.qb.from_(SalaryComponent)
+			.select(SalaryComponent.name, SalaryComponent.component_type)
+			.where(SalaryComponent.component_type == "Professional Tax")
+			.run(pluck="name")
+		)
+	else:
+		component_type_list = (
+			frappe.qb.from_(SalaryComponent)
+			.select(SalaryComponent.name)
+			.where(
+				(SalaryComponent.name == "Professional Tax")
+				| (SalaryComponent.salary_component == "Professional Tax")
+				| (SalaryComponent.name.like("%Professional Tax%"))
+			)
+			.run(pluck="name")
+		)
 
 	if not len(component_type_list):
 		return []

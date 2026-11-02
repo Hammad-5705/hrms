@@ -113,12 +113,24 @@ def get_data(filters):
 	filter_clauses = get_conditions(filters)
 	component_types = ["Provident Fund", "Additional Provident Fund", "Provident Fund Loan"]
 
-	component_type_dict = frappe._dict(
-		frappe.qb.from_(SalaryComponent)
-		.select(SalaryComponent.name, SalaryComponent.component_type)
-		.where(SalaryComponent.component_type.isin(component_types))
-		.run()
-	)
+	if frappe.db.has_column("Salary Component", "component_type"):
+		component_type_dict = frappe._dict(
+			frappe.qb.from_(SalaryComponent)
+			.select(SalaryComponent.name, SalaryComponent.component_type)
+			.where(SalaryComponent.component_type.isin(component_types))
+			.run()
+		)
+	else:
+		matched_components = (
+			frappe.qb.from_(SalaryComponent)
+			.select(SalaryComponent.name)
+			.where(
+				(SalaryComponent.name.isin(component_types))
+				| (SalaryComponent.salary_component.isin(component_types))
+			)
+			.run(pluck="name")
+		)
+		component_type_dict = frappe._dict({c: c for c in matched_components})
 
 	if not len(component_type_dict):
 		return []
